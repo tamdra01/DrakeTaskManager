@@ -1,0 +1,429 @@
+import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+public class DrakeTaskManager {
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            TaskGUI taskGUI = new TaskGUI();
+            taskGUI.createAndShowGUI();
+        });
+    }
+}
+
+class Task implements Serializable {
+    private String name;
+    private String description;
+    private LocalDate dueDate;
+    private boolean completed;
+
+    public Task(String name, String description, LocalDate dueDate) {
+        this.name = name;
+        this.description = description;
+        this.dueDate = dueDate;
+        this.completed = false;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public LocalDate getDueDate() {
+        return dueDate;
+    }
+
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    public void markAsCompleted(boolean value) {
+        completed = value;
+    }
+
+    public void editTask(String newName, String newDescription, LocalDate newDueDate) {
+        this.name = newName;
+        this.description = newDescription;
+        this.dueDate = newDueDate;
+    }
+
+    @Override
+    public String toString() {
+        return name + " (Due: " + dueDate.toString() + ")";
+    }
+}
+
+class TaskManager {
+    private List<Task> tasks;
+
+    public TaskManager() {
+        tasks = new ArrayList<>();
+    }
+
+    public void createTask(String name, String description, LocalDate dueDate) {
+        Task task = new Task(name, description, dueDate);
+        tasks.add(task);
+    }
+
+    public List<Task> getTasks() {
+        return tasks;
+    }
+
+    public void markTaskAsCompleted(Task task, boolean value) {
+        task.markAsCompleted(value);
+    }
+
+    public void editTask(Task task, String newName, String newDescription, LocalDate newDueDate) {
+        task.editTask(newName, newDescription, newDueDate);
+    }
+
+    public void deleteTask(Task task) {
+        tasks.remove(task);
+    }
+}
+
+class TaskGUI {
+    private JFrame frame;
+    private JList<Task> taskList;
+    private DefaultListModel<Task> listModel;
+    private PlaceholderTextField nameField;
+    private PlaceholderTextField dueDateField;
+    private JTextArea descriptionArea;
+    private TaskManager taskManager;
+    private JTextArea taskDetailsTextArea;
+
+    public TaskGUI() {
+        taskManager = new TaskManager();
+    }
+
+    public void createAndShowGUI() {
+        frame = new JFrame("Drake's Personal Task Manager");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(800, 500);
+
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BorderLayout());
+
+        listModel = new DefaultListModel<>();
+        taskList = new JList<>(listModel);
+        taskList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        JScrollPane scrollPane = new JScrollPane(taskList);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
+
+        JPanel inputPanel = new JPanel();
+        inputPanel.setLayout(new GridBagLayout());
+
+        GridBagConstraints constraints = new GridBagConstraints();
+        constraints.insets = new Insets(5, 5, 5, 5);
+        constraints.anchor = GridBagConstraints.WEST;
+
+        JLabel nameLabel = new JLabel("Task Name:");
+        nameField = new PlaceholderTextField("Enter task name");
+        nameField.setColumns(15);
+
+        JLabel descriptionLabel = new JLabel("Description:");
+        descriptionArea = new JTextArea(4, 15);
+        descriptionArea.setWrapStyleWord(true);
+        descriptionArea.setLineWrap(true);
+        JScrollPane descriptionScrollPane = new JScrollPane(descriptionArea);
+
+        JLabel dueDateLabel = new JLabel("Due Date (YYYY-MM-DD):");
+        dueDateField = new PlaceholderTextField("Enter due date");
+        dueDateField.setColumns(15);
+
+        JButton createButton = new JButton("Create Task");
+        createButton.setBackground(Color.GREEN);
+        createButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String name = nameField.getText();
+                String description = descriptionArea.getText();
+                String dueDateString = dueDateField.getText();
+
+                try {
+                    LocalDate dueDate = LocalDate.parse(dueDateString);
+                    taskManager.createTask(name, description, dueDate);
+                    updateTaskList();
+                    clearInputFields();
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(frame, "Invalid input. Please check the date format.");
+                }
+            }
+        });
+
+        constraints.gridx = 0;
+        constraints.gridy = 0;
+        inputPanel.add(nameLabel, constraints);
+
+        constraints.gridx = 1;
+        inputPanel.add(nameField, constraints);
+
+        constraints.gridx = 0;
+        constraints.gridy = 1;
+        inputPanel.add(descriptionLabel, constraints);
+
+        constraints.gridx = 1;
+        inputPanel.add(descriptionScrollPane, constraints);
+
+        constraints.gridx = 0;
+        constraints.gridy = 2;
+        inputPanel.add(dueDateLabel, constraints);
+
+        constraints.gridx = 1;
+        inputPanel.add(dueDateField, constraints);
+
+        constraints.gridx = 0;
+        constraints.gridy = 3;
+        constraints.gridwidth = 2;
+        inputPanel.add(createButton, constraints);
+
+        mainPanel.add(inputPanel, BorderLayout.WEST);
+
+        JButton editButton = new JButton("Edit Task");
+        editButton.setBackground(Color.BLUE);
+        editButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int selectedIndex = taskList.getSelectedIndex();
+                if (selectedIndex != -1) {
+                    Task selectedTask = taskList.getSelectedValue();
+                    String newName = nameField.getText();
+                    String newDescription = descriptionArea.getText();
+                    String newDueDateString = dueDateField.getText();
+
+                    try {
+                        LocalDate newDueDate = LocalDate.parse(newDueDateString);
+                        taskManager.editTask(selectedTask, newName, newDescription, newDueDate);
+                        updateTaskList();
+                        clearInputFields();
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(frame, "Invalid input. Please check the date format.");
+                    }
+                }
+            }
+        });
+
+        constraints.gridx = 0;
+        constraints.gridy = 4;
+        constraints.gridwidth = 2;
+        inputPanel.add(editButton, constraints);
+
+        JButton deleteButton = new JButton("Delete Task");
+        deleteButton.setBackground(Color.RED);
+        deleteButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int selectedIndex = taskList.getSelectedIndex();
+                if (selectedIndex != -1) {
+                    Task selectedTask = taskList.getSelectedValue();
+                    taskManager.deleteTask(selectedTask);
+                    updateTaskList();
+                    clearInputFields();
+                    clearTaskDetails(); // Clear the task details area
+                }
+            }
+        });
+
+        constraints.gridx = 0;
+        constraints.gridy = 5;
+        constraints.gridwidth = 2;
+        inputPanel.add(deleteButton, constraints);
+
+        JButton exitButton = new JButton("Exit");
+        exitButton.setBackground(Color.ORANGE);
+        exitButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int choice = JOptionPane.showConfirmDialog(frame, "Are you sure you want to exit?", "Confirm Exit", JOptionPane.YES_NO_OPTION);
+                if (choice == JOptionPane.YES_OPTION) {
+                    saveTasksToFile(); // Save tasks before exiting
+                    JOptionPane.showMessageDialog(frame, "Thank you for using the Task Manager. Goodbye!");
+                    frame.dispose();
+                }
+            }
+        });
+
+        constraints.gridx = 0;
+        constraints.gridy = 6;
+        constraints.gridwidth = 2;
+        inputPanel.add(exitButton, constraints);
+
+        JButton markCompletedButton = new JButton("Mark Completed");
+        markCompletedButton.setBackground(Color.YELLOW);
+        markCompletedButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int selectedIndex = taskList.getSelectedIndex();
+                if (selectedIndex != -1) {
+                    Task selectedTask = taskList.getSelectedValue();
+                    boolean isCompleted = selectedTask.isCompleted();
+                    taskManager.markTaskAsCompleted(selectedTask, !isCompleted);
+                    updateTaskList();
+                    displayTaskDetails(selectedTask);
+                }
+            }
+        });
+
+        constraints.gridx = 0;
+        constraints.gridy = 7;
+        constraints.gridwidth = 2;
+        inputPanel.add(markCompletedButton, constraints);
+
+        JButton saveButton = new JButton("Save Tasks");
+        saveButton.setBackground(Color.CYAN);
+        saveButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                saveTasksToFile();
+            }
+        });
+
+        constraints.gridx = 0;
+        constraints.gridy = 8;
+        constraints.gridwidth = 2;
+        inputPanel.add(saveButton, constraints);
+
+        JButton loadButton = new JButton("Load Tasks");
+        loadButton.setBackground(Color.MAGENTA);
+        loadButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                loadTasksFromFile();
+            }
+        });
+
+        constraints.gridx = 0;
+        constraints.gridy = 9;
+        constraints.gridwidth = 2;
+        inputPanel.add(loadButton, constraints);
+
+        mainPanel.add(inputPanel, BorderLayout.WEST);
+
+        taskDetailsTextArea = new JTextArea();
+        taskDetailsTextArea.setEditable(false);
+
+        mainPanel.add(taskDetailsTextArea, BorderLayout.EAST);
+
+        taskList.addListSelectionListener(e -> {
+            Task selectedTask = taskList.getSelectedValue();
+            if (selectedTask != null) {
+                displayTaskDetails(selectedTask);
+            }
+        });
+
+        taskList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int selectedIndex = taskList.getSelectedIndex();
+                    if (selectedIndex != -1) {
+                        Task selectedTask = taskList.getSelectedValue();
+                        nameField.setText(selectedTask.getName());
+                        descriptionArea.setText(selectedTask.getDescription());
+                        dueDateField.setText(selectedTask.getDueDate().toString());
+                    }
+                }
+            }
+        });
+
+        frame.add(mainPanel);
+        frame.setVisible(true);
+    }
+
+    private void updateTaskList() {
+        listModel.clear();
+        for (Task task : taskManager.getTasks()) {
+            listModel.addElement(task);
+        }
+    }
+
+    private void displayTaskDetails(Task task) {
+        taskDetailsTextArea.setText(
+                "Name: " + task.getName() + "\n" +
+                        "Description: " + task.getDescription() + "\n" +
+                        "Due Date: " + task.getDueDate() + "\n" +
+                        "Completed: " + (task.isCompleted() ? "Yes" : "No"));
+    }
+
+    private void clearInputFields() {
+        nameField.setText("");
+        descriptionArea.setText("");
+        dueDateField.setText("");
+    }
+
+    private void clearTaskDetails() {
+        taskDetailsTextArea.setText("");
+    }
+
+    private void saveTasksToFile() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Save Tasks");
+        fileChooser.setFileFilter(new FileNameExtensionFilter("Task List Files (*.tsk)", "tsk"));
+
+        int userSelection = fileChooser.showSaveDialog(frame);
+
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToSave = fileChooser.getSelectedFile();
+            try (ObjectOutputStream outputStream = new ObjectOutputStream(new FileOutputStream(fileToSave))) {
+                List<Task> tasksToSave = taskManager.getTasks();
+                outputStream.writeObject(tasksToSave);
+                JOptionPane.showMessageDialog(frame, "Tasks saved successfully.");
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(frame, "Error saving tasks: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void loadTasksFromFile() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Load Tasks");
+        fileChooser.setFileFilter(new FileNameExtensionFilter("Task List Files (*.tsk)", "tsk"));
+
+        int userSelection = fileChooser.showOpenDialog(frame);
+
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToLoad = fileChooser.getSelectedFile();
+            try (ObjectInputStream inputStream = new ObjectInputStream(new FileInputStream(fileToLoad))) {
+                List<Task> loadedTasks = (List<Task>) inputStream.readObject();
+                taskManager.getTasks().clear();
+                taskManager.getTasks().addAll(loadedTasks);
+                updateTaskList();
+                JOptionPane.showMessageDialog(frame, "Tasks loaded successfully.");
+            } catch (IOException | ClassNotFoundException e) {
+                JOptionPane.showMessageDialog(frame, "Error loading tasks: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    // Custom JTextField with placeholder text
+    class PlaceholderTextField extends JTextField {
+        private String placeholder;
+
+        public PlaceholderTextField(String placeholder) {
+            this.placeholder = placeholder;
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+
+            if (getText().isEmpty()) {
+                int inset = getInsets().left;
+                FontMetrics fm = g.getFontMetrics();
+                int placeholderX = inset;
+                int placeholderY = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
+                g.setColor(UIManager.getColor("textInactiveText"));
+                g.drawString(placeholder, placeholderX, placeholderY);
+            }
+        }
+    }
+}
